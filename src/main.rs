@@ -36,6 +36,18 @@ async fn main() {
                                     }
                                 });
                         }
+                        ItemDefs{defs, aliases: _} => {
+                            defs.into_iter()
+                                .for_each(|itemdef| {
+                                    [itemdef.inventory_image, itemdef.wield_image, itemdef.inventory_overlay, itemdef.wield_overlay]
+                                        .into_iter()
+                                        .for_each(|texture|
+                                            if !texture.is_empty() {
+                                                println!("{texture}");
+                                            }
+                                        );
+                                });
+                        }
                         Kick(reason) => {
                             eprintln!("kicked: {reason}");
                         }
