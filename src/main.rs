@@ -12,9 +12,13 @@ struct Args {
     #[clap(value_parser)]
     address: String,
 
-    /// Quit QUIT_AFTER seconds after authentication
+    /// Quit after QUIT_AFTER seconds
     #[clap(short, long, value_parser)]
-    quit_after: Option<f32>,
+    quit_after_seconds: Option<f32>,
+
+    /// Quit after having received node definitions
+    #[clap(short = 'Q', long, value_parser, default_value_t = false)]
+    quit_after_nodes: bool,
 
     /// Player name
     #[clap(short, long, value_parser, default_value = "texmodbot")]
@@ -29,7 +33,8 @@ struct Args {
 async fn main() {
     let Args {
         address,
-        quit_after,
+        quit_after_seconds,
+        quit_after_nodes,
         username,
         password,
     } = Args::parse();
@@ -39,7 +44,13 @@ async fn main() {
     let mut auth = mt_auth::Auth::new(tx.clone(), username, password, "en_US");
     let worker = tokio::spawn(worker.run());
 
-    let mut quit_sleep: Option<Pin<Box<Sleep>>> = None;
+    let mut quit_sleep: Option<Pin<Box<Sleep>>> = quit_after_seconds.and_then(|x| {
+        if x >= 0.0 {
+            Some(Box::pin(sleep(Duration::from_secs_f32(x))))
+        } else {
+            None
+        }
+    });
 
     loop {
         tokio::select! {
@@ -68,14 +79,11 @@ async fn main() {
                                     }
                                 });
 
-                            quit_sleep = quit_after.and_then(|x| {
-                                if x >= 0.0 {
-                                    Some(Box::pin(sleep(Duration::from_secs_f32(x))))
-                                } else {
-                                    None
-                                }
-                            });
+                            if quit_after_nodes {
+                                tx.close();
+                            }
                         }
+
                         Kick(reason) => {
                             eprintln!("kicked: {reason}");
                         }
