@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 mt_net = { git = "https://github.com/minetest-rust/mt_net", features = ["conn", "client"] }
 tokio = { version = "1.25.0", features = ["rt", "rt-multi-thread", "signal"] }
-mt_auth = { path = "../mt_auth" }
+mt_auth = { git = "https://github.com/minetest-rust/mt_auth" }

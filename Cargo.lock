@@ -527,6 +527,7 @@ dependencies = [
 [[package]]
 name = "mt_auth"
 version = "0.1.0"
+source = "git+https://github.com/minetest-rust/mt_auth#482cfb4f09f9ca0bd191c7b703dfb374e55337f0"
 dependencies = [
  "futures",
  "mt_net",
