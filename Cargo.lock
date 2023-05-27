@@ -525,7 +525,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mt_dumptexmod"
+name = "mt_auth"
 version = "0.1.0"
 dependencies = [
  "futures",
@@ -567,7 +567,7 @@ dependencies = [
 [[package]]
 name = "mt_ser"
 version = "0.1.0"
-source = "git+https://github.com/minetest-rust/mt_ser#5baa62aea9af9ba7cc74823d07250fe772518abc"
+source = "git+https://github.com/minetest-rust/mt_ser#87dbe32644a66dc4be2c3cf82d47d62f2907405f"
 dependencies = [
  "byteorder",
  "cgmath",
@@ -583,7 +583,7 @@ dependencies = [
 [[package]]
 name = "mt_ser_derive"
 version = "0.1.0"
-source = "git+https://github.com/minetest-rust/mt_ser#5baa62aea9af9ba7cc74823d07250fe772518abc"
+source = "git+https://github.com/minetest-rust/mt_ser#87dbe32644a66dc4be2c3cf82d47d62f2907405f"
 dependencies = [
  "convert_case",
  "darling 0.14.4",
@@ -1035,6 +1035,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "texmodbot"
+version = "0.1.0"
+dependencies = [
+ "mt_auth",
+ "mt_net",
+ "tokio",
 ]
 
 [[package]]
