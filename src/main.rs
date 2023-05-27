@@ -1,13 +1,45 @@
+use clap::Parser;
+use futures_util::future::OptionFuture;
 use mt_net::{ReceiverExt, SenderExt, ToCltPkt, ToSrvPkt};
+use std::pin::Pin;
+use std::time::Duration;
+use tokio::time::{sleep, Sleep};
+
+#[derive(Parser, Debug)]
+#[clap(version, about, long_about = None)]
+struct Args {
+    /// Server address. Format: address:port
+    #[clap(value_parser)]
+    address: String,
+
+    /// Quit QUIT_AFTER seconds after authentication
+    #[clap(short, long, value_parser)]
+    quit_after: Option<f32>,
+
+    /// Player name
+    #[clap(short, long, value_parser, default_value = "texmodbot")]
+    username: String,
+
+    /// Password
+    #[clap(short, long, value_parser, default_value = "owo")]
+    password: String,
+}
 
 #[tokio::main]
 async fn main() {
-    let (tx, mut rx, worker) = mt_net::connect(&std::env::args().nth(1).expect("missing argument"))
-        .await
-        .unwrap();
+    let Args {
+        address,
+        quit_after,
+        username,
+        password,
+    } = Args::parse();
 
-    let mut auth = mt_auth::Auth::new(tx.clone(), "texmodbot", "owo", "en_US");
+    let (tx, mut rx, worker) = mt_net::connect(&address).await.unwrap();
+
+    let mut auth = mt_auth::Auth::new(tx.clone(), username, password, "en_US");
     let worker = tokio::spawn(worker.run());
+
+    let mut quit_sleep: Option<Pin<Box<Sleep>>> = None;
 
     loop {
         tokio::select! {
@@ -35,6 +67,14 @@ async fn main() {
                                         println!("{texture}");
                                     }
                                 });
+
+                            quit_sleep = quit_after.and_then(|x| {
+                                if x >= 0.0 {
+                                    Some(Box::pin(sleep(Duration::from_secs_f32(x))))
+                                } else {
+                                    None
+                                }
+                            });
                         }
                         Kick(reason) => {
                             eprintln!("kicked: {reason}");
@@ -56,6 +96,9 @@ async fn main() {
                     .await
                     .unwrap();
             },
+            Some(_) = OptionFuture::from(quit_sleep.as_mut()) => {
+                tx.close();
+            }
             _ = tokio::signal::ctrl_c() => {
                 tx.close();
             }
