@@ -167,6 +167,18 @@ impl Conn {
                     })
                     .await
                     .unwrap();
+
+                self.tx
+                    .send(&ToSrvPkt::CltReady {
+                        major: 0,
+                        minor: 1,
+                        patch: 0,
+                        reserved: 0,
+                        version: "https://github.com/LizzyFleckenstein03/texmodbot".into(),
+                        formspec: 4,
+                    })
+                    .await
+                    .unwrap();
             }
             _ => {}
         }
