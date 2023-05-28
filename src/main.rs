@@ -65,6 +65,18 @@ impl Bot {
             }
         };
 
+        let print_obj_msg = |msg: &mt_net::ObjMsg| {
+            use mt_net::ObjMsg::*;
+            match msg {
+                TextureMod { texture_mod } => print_texture(texture_mod),
+                Props(props) => {
+                    props.textures.iter().for_each(&mut print_texture);
+                    print_texture(&props.dmg_texture_mod);
+                }
+                _ => {}
+            }
+        };
+
         match pkt {
             NodeDefs(defs) => {
                 defs.0
@@ -93,6 +105,15 @@ impl Bot {
                     .for_each(print_texture);
 
                 self.got_def(DefType::ItemDef);
+            }
+            ObjMsgs { msgs } => {
+                msgs.iter().map(|x| &x.msg).for_each(print_obj_msg);
+            }
+            ObjRemoveAdd { add, .. } => {
+                add.iter()
+                    .flat_map(|x| x.init_data.msgs.iter())
+                    .map(|x| &x.0)
+                    .for_each(print_obj_msg);
             }
             Kick(reason) => {
                 eprintln!("kicked: {reason}");
