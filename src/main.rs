@@ -65,13 +65,19 @@ impl Bot {
             }
         };
 
+        fn print_texmod(tex: &String, print_texture: &mut impl FnMut(&String)) {
+            if !tex.is_empty() {
+                print_texture(&format!("blank.png{tex}"));
+            }
+        }
+
         let print_obj_msg = |msg: &mt_net::ObjMsg| {
             use mt_net::ObjMsg::*;
             match msg {
-                TextureMod { texture_mod } => print_texture(texture_mod),
+                TextureMod { texture_mod } => print_texmod(texture_mod, &mut print_texture),
                 Props(props) => {
                     props.textures.iter().for_each(&mut print_texture);
-                    print_texture(&props.dmg_texture_mod);
+                    print_texmod(&props.dmg_texture_mod, &mut print_texture);
                 }
                 _ => {}
             }
