@@ -1,6 +1,8 @@
 use clap::Parser;
+use enumset::{EnumSet, EnumSetType};
 use futures_util::future::OptionFuture;
-use mt_net::{ReceiverExt, SenderExt, ToCltPkt, ToSrvPkt};
+use mt_auth::Auth;
+use mt_net::{CltSender, ReceiverExt, SenderExt, ToCltPkt, ToSrvPkt};
 use std::pin::Pin;
 use std::time::Duration;
 use tokio::time::{sleep, Sleep};
@@ -16,9 +18,9 @@ struct Args {
     #[clap(short, long, value_parser)]
     quit_after_seconds: Option<f32>,
 
-    /// Quit after having received node definitions
+    /// Quit after having received item and node definitions
     #[clap(short = 'Q', long, value_parser, default_value_t = false)]
-    quit_after_nodes: bool,
+    quit_after_defs: bool,
 
     /// Player name
     #[clap(short, long, value_parser, default_value = "texmodbot")]
@@ -29,19 +31,94 @@ struct Args {
     password: String,
 }
 
+#[derive(EnumSetType)]
+enum DefType {
+    NodeDef,
+    ItemDef,
+}
+
+struct Bot {
+    conn: CltSender,
+    quit_after_defs: bool,
+    auth: Auth,
+    pending: EnumSet<DefType>,
+}
+
+impl Bot {
+    fn got_def(&mut self, def: DefType) {
+        self.pending.remove(def);
+        if self.quit_after_defs && self.pending.is_empty() {
+            self.conn.close()
+        }
+    }
+
+    async fn handle_pkt(&mut self, pkt: ToCltPkt) {
+        use ToCltPkt::*;
+
+        self.auth.handle_pkt(&pkt).await;
+
+        let print_texture = |tex: &String| {
+            if !tex.is_empty() {
+                println!("{tex}");
+            }
+        };
+
+        match pkt {
+            NodeDefs(defs) => {
+                defs.0
+                    .values()
+                    .flat_map(|def| {
+                        std::iter::empty()
+                            .chain(&def.tiles)
+                            .chain(&def.special_tiles)
+                            .chain(&def.overlay_tiles)
+                    })
+                    .map(|tile| &tile.texture.name)
+                    .for_each(print_texture);
+
+                self.got_def(DefType::NodeDef);
+            }
+            ItemDefs { defs, .. } => {
+                defs.iter()
+                    .flat_map(|def| {
+                        [
+                            &def.inventory_image,
+                            &def.wield_image,
+                            &def.inventory_overlay,
+                            &def.wield_overlay,
+                        ]
+                    })
+                    .for_each(print_texture);
+
+                self.got_def(DefType::ItemDef);
+            }
+            Kick(reason) => {
+                eprintln!("kicked: {reason}");
+            }
+            _ => {}
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let Args {
         address,
         quit_after_seconds,
-        quit_after_nodes,
+        quit_after_defs,
         username,
         password,
     } = Args::parse();
 
     let (tx, mut rx, worker) = mt_net::connect(&address).await.unwrap();
 
-    let mut auth = mt_auth::Auth::new(tx.clone(), username, password, "en_US");
+    let mut bot = Bot {
+        auth: Auth::new(tx.clone(), username, password, "en_US"),
+        conn: tx,
+        quit_after_defs,
+        pending: EnumSet::all(),
+    };
+
     let worker = tokio::spawn(worker.run());
 
     let mut quit_sleep: Option<Pin<Box<Sleep>>> = quit_after_seconds.and_then(|x| {
@@ -57,53 +134,10 @@ async fn main() {
             pkt = rx.recv() => match pkt {
                 None => break,
                 Some(Err(e)) => eprintln!("{e}"),
-                Some(Ok(pkt)) => {
-                    use ToCltPkt::*;
-
-                    auth.handle_pkt(&pkt).await;
-
-                    match pkt {
-                        NodeDefs(defs) => {
-                            defs.0
-                                .values()
-                                .flat_map(|def| {
-                                    std::iter::empty()
-                                        .chain(&def.tiles)
-                                        .chain(&def.special_tiles)
-                                        .chain(&def.overlay_tiles)
-                                })
-                                .map(|tile| &tile.texture.name)
-                                .for_each(|texture| {
-                                    if !texture.is_empty() {
-                                        println!("{texture}");
-                                    }
-                                });
-
-                            if quit_after_nodes {
-                                tx.close();
-                            }
-                        }
-                        ItemDefs{defs, aliases: _} => {
-                            defs.into_iter()
-                                .for_each(|itemdef| {
-                                    [itemdef.inventory_image, itemdef.wield_image, itemdef.inventory_overlay, itemdef.wield_overlay]
-                                        .into_iter()
-                                        .for_each(|texture|
-                                            if !texture.is_empty() {
-                                                println!("{texture}");
-                                            }
-                                        );
-                                });
-                        }
-                        Kick(reason) => {
-                            eprintln!("kicked: {reason}");
-                        }
-                        _ => {}
-                    }
-                }
+                Some(Ok(pkt)) => bot.handle_pkt(pkt).await,
             },
-            _ = auth.poll() => {
-                tx
+            _ = bot.auth.poll() => {
+                bot.conn
                     .send(&ToSrvPkt::CltReady {
                         major: 0,
                         minor: 0,
@@ -114,12 +148,12 @@ async fn main() {
                     })
                     .await
                     .unwrap();
-            },
+            }
             Some(_) = OptionFuture::from(quit_sleep.as_mut()) => {
-                tx.close();
+                bot.conn.close();
             }
             _ = tokio::signal::ctrl_c() => {
-                tx.close();
+                bot.conn.close();
             }
         }
     }

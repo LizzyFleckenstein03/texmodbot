@@ -367,9 +367,30 @@ dependencies = [
 [[package]]
 name = "enumset"
 version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e875f1719c16de097dee81ed675e2d9bb63096823ed3f0ca827b7dea3028bbbb"
+dependencies = [
+ "enumset_derive 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "enumset"
+version = "1.1.2"
 source = "git+https://github.com/Lymia/enumset#4a0c8e126896bc430f225d5e22fab61a1cc96fc0"
 dependencies = [
- "enumset_derive",
+ "enumset_derive 0.8.1 (git+https://github.com/Lymia/enumset)",
+]
+
+[[package]]
+name = "enumset_derive"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e08b6c6ab82d70f08844964ba10c7babb716de2ecaeab9be5717918a5177d3af"
+dependencies = [
+ "darling 0.20.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.18",
 ]
 
 [[package]]
@@ -705,7 +726,7 @@ dependencies = [
  "cgmath",
  "collision",
  "delegate",
- "enumset",
+ "enumset 1.1.2 (git+https://github.com/Lymia/enumset)",
  "mt_rudp",
  "mt_ser",
  "thiserror",
@@ -727,12 +748,12 @@ dependencies = [
 [[package]]
 name = "mt_ser"
 version = "0.1.0"
-source = "git+https://github.com/minetest-rust/mt_ser#87dbe32644a66dc4be2c3cf82d47d62f2907405f"
+source = "git+https://github.com/minetest-rust/mt_ser#a6d41bb35d76f0533dc1e273d8ab8094c0dc4869"
 dependencies = [
  "byteorder",
  "cgmath",
  "collision",
- "enumset",
+ "enumset 1.1.2 (git+https://github.com/Lymia/enumset)",
  "flate2",
  "mt_ser_derive",
  "paste",
@@ -743,7 +764,7 @@ dependencies = [
 [[package]]
 name = "mt_ser_derive"
 version = "0.1.0"
-source = "git+https://github.com/minetest-rust/mt_ser#87dbe32644a66dc4be2c3cf82d47d62f2907405f"
+source = "git+https://github.com/minetest-rust/mt_ser#a6d41bb35d76f0533dc1e273d8ab8094c0dc4869"
 dependencies = [
  "convert_case",
  "darling 0.14.4",
@@ -1216,6 +1237,7 @@ name = "texmodbot"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "enumset 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-util",
  "mt_auth",
  "mt_net",
@@ -1244,9 +1266,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.28.1"
+version = "1.28.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0aa32867d44e6f2ce3385e89dceb990188b8bb0fb25b0cf576647a6f98ac5105"
+checksum = "94d7b1cfd2aa4011f2de74c2c4c63665e27a71006b0a192dcd2710272e73dfa2"
 dependencies = [
  "autocfg 1.1.0",
  "libc",
