@@ -3,6 +3,7 @@ use enumset::{EnumSet, EnumSetType};
 use futures_util::future::OptionFuture;
 use mt_auth::Auth;
 use mt_net::{CltSender, ReceiverExt, SenderExt, ToCltPkt, ToSrvPkt};
+use std::collections::HashSet;
 use std::pin::Pin;
 use std::time::Duration;
 use tokio::time::{sleep, Sleep};
@@ -42,6 +43,7 @@ struct Bot {
     quit_after_defs: bool,
     auth: Auth,
     pending: EnumSet<DefType>,
+    has: HashSet<String>,
 }
 
 impl Bot {
@@ -57,8 +59,8 @@ impl Bot {
 
         self.auth.handle_pkt(&pkt).await;
 
-        let print_texture = |tex: &String| {
-            if !tex.is_empty() {
+        let mut print_texture = |tex: &String| {
+            if !tex.is_empty() && self.has.insert(tex.clone()) {
                 println!("{tex}");
             }
         };
@@ -117,6 +119,7 @@ async fn main() {
         conn: tx,
         quit_after_defs,
         pending: EnumSet::all(),
+        has: HashSet::new(),
     };
 
     let worker = tokio::spawn(worker.run());
